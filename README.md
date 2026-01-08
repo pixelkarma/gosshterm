@@ -60,7 +60,7 @@ Usage of ./goterm:
   -ssh-host string
         SSH host (default "localhost")
   -ssh-port string
-        SSH port (default "2222")
+        SSH port (default "22")
 ```
 
 ### Examples
