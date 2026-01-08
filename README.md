@@ -1,60 +1,43 @@
-# GoTerm
+# GoSSHTerm
 
 A web-based terminal that connects to an SSH server via xterm.js.
+
+## Warning: Curiosity-Driven Code Ahead
+
+This is a "can I do it?" project, not a "should I do it?" project. It exists to prove a point, explore an idea, and generally satisfy personal curiosity.
+
+It is **not production-ready**. If you deploy it anyway, please do so knowingly, cheerfully, and with a strong appreciation for *consequences*.
 
 ## Building
 
 ```bash
-go build -o goterm .
+go build -o gosshterm .
 ```
 
 ## Installation
 
 ### 1. Set up an SSH server with password authentication
 
-GoTerm requires an SSH server that accepts password authentication. If your system's SSH server doesn't allow password auth, you can run a separate instance:
+GoSSHTerm requires an SSH server that accepts password authentication. If your system's SSH server doesn't allow password auth, you can run a separate instance.
+
+### 2. Build
 
 ```bash
-# Create config directory
-sudo mkdir -p /etc/ssh/goterm
-
-# Create sshd config with password auth enabled
-sudo tee /etc/ssh/goterm/sshd_config > /dev/null << 'EOF'
-Port 2222
-ListenAddress 127.0.0.1
-HostKey /etc/ssh/ssh_host_ed25519_key
-HostKey /etc/ssh/ssh_host_rsa_key
-PasswordAuthentication yes
-PermitRootLogin no
-PubkeyAuthentication yes
-UsePAM yes
-Subsystem sftp /usr/lib/openssh/sftp-server
-EOF
-
-# Ensure privilege separation directory exists
-sudo mkdir -p /run/sshd
-
-# Start sshd on port 2222
-sudo /usr/sbin/sshd -f /etc/ssh/goterm/sshd_config
+go build gosshterm .
 ```
 
-### 2. Create a user (optional)
+### 3. Run GoSSHTerm
 
 ```bash
-sudo useradd -m -s /bin/bash myuser
-echo "myuser:mypassword" | sudo chpasswd
+./gosshterm
 ```
 
-### 3. Run GoTerm
-
-```bash
-./goterm
-```
+Then open http://localhost:8000 in your browser, enter your SSH credentials, and connect.
 
 ## Usage
 
 ```
-Usage of ./goterm:
+Usage of ./gosshterm:
   -http string
         HTTP server port (default "8000")
   -ssh-host string
@@ -67,35 +50,32 @@ Usage of ./goterm:
 
 ```bash
 # Default: localhost:2222, HTTP on port 8000
-./goterm
+./gosshterm
 
 # Custom HTTP port
-./goterm -http 9000
+./gosshterm -http 9000
 
 # Connect to a remote SSH server
-./goterm -ssh-host 192.168.1.100 -ssh-port 22
-
-# Connect to standard SSH port on localhost
-./goterm -ssh-port 22
+./gosshterm -ssh-host 192.168.1.100 -ssh-port 22
 ```
 
-Then open http://localhost:8000 in your browser, enter your SSH credentials, and connect.
 
-## Running as a systemd service
 
-Create `/etc/systemd/system/goterm.service`:
+## Running as a *Linux* systemd service
+
+Create `/etc/systemd/system/gosshterm.service`:
 
 ```ini
 [Unit]
-Description=GoTerm Web Terminal
+Description=GoSSHTerm Web Terminal
 After=network.target
 
 [Service]
 Type=simple
 User=nobody
 Group=nogroup
-WorkingDirectory=/opt/goterm
-ExecStart=/opt/goterm/goterm -ssh-port 22
+WorkingDirectory=/opt/gosshterm
+ExecStart=/opt/gosshterm/gosshterm -ssh-port 22
 Restart=always
 RestartSec=5
 
@@ -106,11 +86,12 @@ WantedBy=multi-user.target
 Then:
 
 ```bash
-sudo cp goterm /opt/goterm/
-sudo cp -r static /opt/goterm/
+sudo mkdir /opt/gosshterm/
+sudo cp gosshterm /opt/gosshterm/
+sudo cp -r static /opt/gosshterm/
 sudo systemctl daemon-reload
-sudo systemctl enable goterm
-sudo systemctl start goterm
+sudo systemctl enable gosshterm
+sudo systemctl start gosshterm
 ```
 
 ## Security Notes
