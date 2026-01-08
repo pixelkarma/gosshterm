@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoTerm - Web Terminal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        header {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        header h1 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .status {
+            margin-left: auto;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: #444;
+        }
+        .status.connected {
+            background: #2e7d32;
+        }
+        .status.disconnected {
+            background: #c62828;
+        }
+        #terminal-container {
+            flex: 1;
+            padding: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        #terminal {
+            height: 100%;
+        }
+        #login-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: #2d2d2d;
+            padding: 30px 40px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-box h2 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            color: #aaa;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1e1e1e;
+            color: #fff;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #0078d4;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .login-btn:hover {
+            background: #006cbd;
+        }
+        .login-btn:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #f44;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Terminal</h1>
+        <span class="status" id="status">Not connected</span>
+    </header>
+    
+    <div id="login-container">
+        <div class="login-box">
+            <h2>SSH Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="login-btn" id="login-btn">Connect</button>
+                <div class="error-msg" id="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="terminal-container">
+        <div id="terminal"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+    <script>
+        let terminal;
+        let fitAddon;
+        let ws;
+
+        const loginContainer = document.getElementById('login-container');
+        const terminalContainer = document.getElementById('terminal-container');
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMsg = document.getElementById('error-msg');
+        const statusEl = document.getElementById('status');
+
+        function initTerminal() {
+            terminal = new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#1e1e1e',
+                    foreground: '#d4d4d4',
+                    cursor: '#d4d4d4',
+                    selection: '#264f78',
+                    black: '#000000',
+                    red: '#cd3131',
+                    green: '#0dbc79',
+                    yellow: '#e5e510',
+                    blue: '#2472c8',
+                    magenta: '#bc3fbc',
+                    cyan: '#11a8cd',
+                    white: '#e5e5e5',
+                    brightBlack: '#666666',
+                    brightRed: '#f14c4c',
+                    brightGreen: '#23d18b',
+                    brightYellow: '#f5f543',
+                    brightBlue: '#3b8eea',
+                    brightMagenta: '#d670d6',
+                    brightCyan: '#29b8db',
+                    brightWhite: '#ffffff'
+                }
+            });
+
+            fitAddon = new FitAddon.FitAddon();
+            const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+            
+            terminal.loadAddon(fitAddon);
+            terminal.loadAddon(webLinksAddon);
+            
+            terminal.open(document.getElementById('terminal'));
+            fitAddon.fit();
+
+            terminal.onData((data) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                fitAddon.fit();
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    const dims = fitAddon.proposeDimensions();
+                    if (dims) {
+                        ws.send(JSON.stringify({ rows: dims.rows, cols: dims.cols }));
+                    }
+                }
+            });
+        }
+
+        function connect(username, password) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const params = new URLSearchParams({
+                user: username,
+                pass: password
+            });
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws?${params}`);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = () => {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+                loginBtn.disabled = false;
+                
+                // Show terminal, hide login
+                loginContainer.style.display = 'none';
+                terminalContainer.style.display = 'block';
+                
+                if (!terminal) {
+                    initTerminal();
+                } else {
+                    fitAddon.fit();
+                }
+                terminal.focus();
+                
+                // Send initial size
+                setTimeout(() => {
+                    const dims = fitAddon.proposeDimensions();
+                    if (dims) {
+                        ws.send(JSON.stringify({ rows: dims.rows, cols: dims.cols }));
+                    }
+                }, 100);
+            };
+
+            ws.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    terminal.write(new Uint8Array(event.data));
+                } else {
+                    terminal.write(event.data);
+                }
+            };
+
+            ws.onclose = (event) => {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                loginBtn.disabled = false;
+                
+                // Show login, hide terminal
+                loginContainer.style.display = 'flex';
+                terminalContainer.style.display = 'none';
+                
+                if (terminal) {
+                    terminal.clear();
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                errorMsg.textContent = 'Connection failed';
+                errorMsg.style.display = 'block';
+                loginBtn.disabled = false;
+            };
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            loginBtn.disabled = true;
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            connect(username, password);
+        });
+    </script>
+</body>
+</html>
