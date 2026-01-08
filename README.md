@@ -61,10 +61,6 @@ Usage of ./goterm:
         SSH host (default "localhost")
   -ssh-port string
         SSH port (default "2222")
-  -ssh-user string
-        SSH username - used as fallback (default "david")
-  -ssh-pass string
-        SSH password - used as fallback (default "qwerty")
 ```
 
 ### Examples

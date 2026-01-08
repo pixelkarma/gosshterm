@@ -14,11 +14,9 @@ import (
 )
 
 var (
-	httpPort  = flag.String("http", "8000", "HTTP server port")
-	sshHost   = flag.String("ssh-host", "localhost", "SSH host")
-	sshPort   = flag.String("ssh-port", "2222", "SSH port")
-	sshUser   = flag.String("ssh-user", "david", "SSH username")
-	sshPass   = flag.String("ssh-pass", "qwerty", "SSH password")
+	httpPort = flag.String("http", "8000", "HTTP server port")
+	sshHost  = flag.String("ssh-host", "localhost", "SSH host")
+	sshPort  = flag.String("ssh-port", "22", "SSH port")
 )
 
 var upgrader = websocket.Upgrader{
@@ -47,12 +45,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	if port == "" {
 		port = *sshPort
-	}
-	if user == "" {
-		user = *sshUser
-	}
-	if pass == "" {
-		pass = *sshPass
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -219,7 +211,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 
-	log.Printf("Connecting to SSH at %s:%s as user %s", *sshHost, *sshPort, *sshUser)
+	log.Printf("SSH target: %s:%s", *sshHost, *sshPort)
 
 	http.HandleFunc("/ws", handleWebSocket)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
