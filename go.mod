@@ -1,4 +1,4 @@
-module goterm
+module gosshterm
 
 go 1.24.0
 

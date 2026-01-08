@@ -269,4 +269,3 @@ func main() {
 	log.Printf("Server starting on :%s", *httpPort)
 	log.Fatal(http.ListenAndServe(":"+*httpPort, nil))
 }
-``
