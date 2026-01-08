@@ -1,6 +1,6 @@
 # GoSSHTerm
 
-A web-based terminal that connects to an SSH server via xterm.js.
+A web-based terminal that connects to an SSH server via xterm.js. It runs on macOS and Linux (tested on Ubuntu).
 
 ## Warning: Curiosity-Driven Code Ahead
 
