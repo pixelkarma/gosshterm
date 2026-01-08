@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh"
@@ -123,6 +124,49 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	var wg sync.WaitGroup
 	done := make(chan struct{})
+	var doneOnce sync.Once
+	closeDone := func() {
+		doneOnce.Do(func() {
+			close(done)
+		})
+	}
+
+	inactivityTimeout := 10 * time.Minute
+	activityCh := make(chan struct{}, 1)
+	signalActivity := func() {
+		select {
+		case activityCh <- struct{}{}:
+		default:
+		}
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.NewTimer(inactivityTimeout)
+		defer timer.Stop()
+		for {
+			select {
+			case <-activityCh:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(inactivityTimeout)
+			case <-done:
+				return
+			case <-timer.C:
+				log.Printf("Closing idle session after %s", inactivityTimeout)
+				closeDone()
+				session.Close()
+				conn.Close()
+				return
+			}
+		}
+	}()
+	signalActivity()
 
 	// Read from SSH stdout and send to WebSocket
 	wg.Add(1)
@@ -142,6 +186,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if n > 0 {
+					signalActivity()
 					if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
 						log.Printf("WebSocket write error: %v", err)
 						return
@@ -169,6 +214,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if n > 0 {
+					signalActivity()
 					if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
 						log.Printf("WebSocket write error: %v", err)
 						return
@@ -183,9 +229,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("WebSocket read error: %v", err)
-			close(done)
+			closeDone()
 			break
 		}
+		signalActivity()
 
 		// Check if it's a resize message (JSON)
 		if msgType == websocket.TextMessage {
@@ -199,7 +246,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		// Otherwise, send as input
 		if _, err := stdin.Write(msg); err != nil {
 			log.Printf("SSH stdin write error: %v", err)
-			close(done)
+			closeDone()
 			break
 		}
 	}
@@ -222,3 +269,4 @@ func main() {
 	log.Printf("Server starting on :%s", *httpPort)
 	log.Fatal(http.ListenAndServe(":"+*httpPort, nil))
 }
+``
