@@ -2,34 +2,18 @@
 
 A web-based terminal that connects to an SSH server via xterm.js. It runs on macOS and Linux (tested on Ubuntu).
 
+GoSSHTerm requires an SSH server that accepts password authentication.
+
 ## Warning: Curiosity-Driven Code Ahead
 
 This is a "can I do it?" project, not a "should I do it?" project. It exists to prove a point, explore an idea, and generally satisfy personal curiosity.
 
-It is **not production-ready**. If you deploy it anyway, please do so knowingly, cheerfully, and with a strong appreciation for *consequences*.
+It is **not production-ready**. If you deploy it anyway, please do so knowingly, cheerfully, and with a strong appreciation for _consequences_.
 
 ## Building
 
 ```bash
 go build -o gosshterm .
-```
-
-## Installation
-
-### 1. Set up an SSH server with password authentication
-
-GoSSHTerm requires an SSH server that accepts password authentication. If your system's SSH server doesn't allow password auth, you can run a separate instance.
-
-### 2. Build
-
-```bash
-go build gosshterm .
-```
-
-### 3. Run GoSSHTerm
-
-```bash
-./gosshterm
 ```
 
 Then open http://localhost:8000 in your browser, enter your SSH credentials, and connect.
@@ -59,9 +43,7 @@ Usage of ./gosshterm:
 ./gosshterm -ssh-host 192.168.1.100 -ssh-port 22
 ```
 
-
-
-## Running as a *Linux* systemd service
+## Running as a _Linux_ systemd service
 
 Create `/etc/systemd/system/gosshterm.service`:
 
